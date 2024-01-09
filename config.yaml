@@ -1,3 +1,0 @@
-serial:
-   port: "COM3"
-   debug: true

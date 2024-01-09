@@ -1,10 +1,9 @@
 FROM debian:bullseye
 
 RUN apt update && apt upgrade && apt install curl unzip -y
-RUN apt-get install -y python3
-#RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
-
-#RUN curl -o /tmp/nhscontrol.zip https://nhs.com.br/wp-content/uploads/2023/11/nhsups_3.1.36_x86_64_eGLIBC_2.11.zip
+RUN apt-get install -y python3 && apt-get install -y python3-pip
+RUN python3 -m pip install paho-mqtt
+RUN apt-get remove -y python3-pip
 
 
 COPY nhsups_3.1.36_x86_64_eGLIBC_2.11.zip /tmp/nhscontrol.zip

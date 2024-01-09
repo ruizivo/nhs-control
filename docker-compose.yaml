@@ -3,18 +3,18 @@ version: "3.9"
 services:
   nhscontrol:
     build: .
-    platform: linux/x86_64
-    image: ruizivo/nhs-control:0.1
+    # platform: linux/x86_64
+    # platform: linux/amd64_v8
+    # image: ruizivo/nhs-control:latest
     container_name: nhs-control
     ports:
       # port for the web UI
       - 2001:2001
-      - 2000:2000
-    #devices:
+      # - 2000:2000
+    # devices:
     #   # mapping for the device port in the host system. Make sure to map to the device set in the config file
     #  - /dev/ttyACM0:/dev/ttyS0
     volumes:
-      #- ./nhsupsserver.cfg:/var/lib/nhsups/nhsupsserver.cfg
       - ./DATA/Documents/NHS/nhsupsserver.cfg:/var/lib/nhsups/nhsupsserver.cfg
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"

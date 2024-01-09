@@ -1,11 +1,9 @@
-from pickle import FALSE
 import telnetlib
 import sys
 import time
 import re
 import json
 import os
-from types import SimpleNamespace
 import paho.mqtt.client as mqtt
 
 debug = True
@@ -42,6 +40,7 @@ class Mqtt:
 
 class Telnet:
     def __init__(self, host, port, username, password) -> None:
+        time.sleep(10)
         self.connect(host, port, username, password)
     
     def connect(self, host, port, username, password):
@@ -194,34 +193,42 @@ class HomeAssistantDevice:
 
 class Control:
     def __init__(self):
-        # mqttHost = os.getenv("MQTT_HOST")
-        # mqttPort = os.getenv("MQTT_PORT")
-        # mqttTopic = os.getenv("MQTT_TOPIC")
-        # mqttUser = os.getenv("MQTT_USER")
-        # mqttPass = os.getenv("MQTT_PASS")
+        mqttHost = os.getenv("MQTT_HOST")
+        mqttPort = os.getenv("MQTT_PORT")
+        mqttUser = os.getenv("MQTT_USER")
+        mqttPass = os.getenv("MQTT_PASS")
 
-        mqttHost = "192.168.1.20"
-        mqttPort = 1883
-        mqttUser = "ruizivo"
-        mqttPass = "naodigonao"
+        # mqttHost = "192.168.1.20"
+        # mqttPort = 1883
+        # mqttUser = "ruizivo"
+        # mqttPass = "naodigonao"
+        nhsHost = os.getenv("NHS_HOST")
 
         try:
-            telnetHost = "192.168.1.20"
+            telnetHost = "127.0.0.1"
             telnetUsername = "admin"
             telnetPassword = "admin"
             telnetPort = 2000
-            tn = Telnet(telnetHost, telnetPort, telnetUsername, telnetPassword)
+
+            if debug:
+                print("Init telnet on ", telnetHost)   
+
+            tn = Telnet(telnetHost, telnetPort, telnetUsername, telnetPassword)        
+
 
             data = self.getInfo(tn.executCommand("estado"))
-            self.device = HomeAssistantDevice(data, mqttHost, mqttPort, mqttUser, mqttPass )
+            if mqttHost:
+                self.device = HomeAssistantDevice(data, mqttHost, mqttPort, mqttUser, mqttPass )
         
             while (True):
                 if debug:
                     print("----- begin of send -----")
+                    
                 texto = tn.executCommand("estado")
 
                 dados = self.getInfo(texto)
-                self.device.sendAllValues(dados);
+                if mqttHost:
+                    self.device.sendAllValues(dados);
 
                 if debug:
                     print("----- end of send -----")
@@ -251,7 +258,8 @@ class Control:
         jsonResult = json.dumps(data, indent=4)
 
         # print the result
-        # print(jsonResult)     
+        if debug:
+            print(jsonResult)     
         return data   
 
 

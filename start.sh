@@ -1,7 +1,6 @@
 # runs 2 commands simultaneously:
-
-./nhsupsserver & # your first application
+./nhsupsserver & # first application
 P1=$!
-python3 -u nhstelnet.py & # your second application
+python3 -u nhstelnet.py & # second application
 P2=$!
 wait $P1 $P2
