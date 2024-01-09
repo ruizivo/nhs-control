@@ -4,6 +4,7 @@ import time
 import re
 import json
 import os
+import traceback
 import paho.mqtt.client as mqtt
 
 debug = True
@@ -32,15 +33,16 @@ class Mqtt:
 
     def start(self):
         try:
+
             self.client.connect(self.host, self.port)
             self.client.loop_start()
         except Exception as e:
             print(e)
+            traceback.print_exc()
             sys.exit()
 
 class Telnet:
     def __init__(self, host, port, username, password) -> None:
-        time.sleep(10)
         self.connect(host, port, username, password)
     
     def connect(self, host, port, username, password):
@@ -57,7 +59,7 @@ class Telnet:
         except Exception as e:
             print("Erro ao realizar a conexao!")
             print(e)
-
+            traceback.print_exc()
     
     def isConnected(self):
         return self.tn.sock.fileno()
@@ -76,8 +78,9 @@ class HomeAssistantDevice:
     discoveryTopic = "homeassistant/{sensorType}/{deviceName}/{sensorName}/config"
     discoveryStateTopic = "{deviceName}/{sensorType}/{sensorName}/state"
 
-    def __init__(self, data, mqttHost, mqttPort, mqttUser, mqttPass) -> None:
+    def __init__(self, data, nhsHost, mqttHost, mqttPort, mqttUser, mqttPass) -> None:
         if mqttHost and mqttPort:
+            self.nhsHost = nhsHost
             self.mqtt_client = Mqtt(mqttHost, mqttPort, "NHS", mqttUser, mqttPass )            
             self.homeAssistantDiscovery(data)
             self.mqtt_client.start()
@@ -105,9 +108,9 @@ class HomeAssistantDevice:
 
     def getSensorType(self, data):
 
-        if result['Dados do equipamento']['Rede em falha'] == 'sim':
+        if data['Dados do equipamento']['Rede em falha'] == 'sim':
             state = 'OFF'
-        elif result['Dados do equipamento']['Rede em falha'] == 'nao':
+        elif data['Dados do equipamento']['Rede em falha'] == 'nao':
             state = 'ON'
         else:
             state = 'UNKNOW'
@@ -123,7 +126,7 @@ class HomeAssistantDevice:
         self.mqtt_client.publish(topic, value)
         
         if debug:
-                print(topic, value)
+            print(topic, value)
     
     def sendAllValues(self, data):
         deviceName = data["Identificacao do equipamento"]["Modelo"].replace(" ","")
@@ -137,6 +140,9 @@ class HomeAssistantDevice:
             if key[1] == "sim":
                 sensorType = "binary_sensor"
                 valor = "ON"
+            if key[1] == "indefinido":
+                sensorType = "binary_sensor"
+                valor = "UNKNOW"
 
             if(sensorType == "sensor"):
                 valor, simbolo1 = self.splitNumberAndSymbol(key[1])
@@ -151,12 +157,12 @@ class HomeAssistantDevice:
     def createDeviceSensor(self, deviceName, sensorValue):
         if self.mqtt_client:
             sensorType = "sensor"
-            if sensorValue[1] == "nao" or sensorValue[1] == "sim":
+            if sensorValue[1] == "nao" or sensorValue[1] == "sim" or sensorValue[1] == "indefinido":
                 sensorType = "binary_sensor"
 
             sensor = {}
             sensor["device"] = {}
-            sensor["device"]["configuration_url"]="http://192.168.1.20:2001"
+            sensor["device"]["configuration_url"]="http://"+self.nhsHost+":2001"
             sensor["device"]["model"] = deviceName
             sensor["device"]["name"] = "NHS"
             sensor["device"]["identifiers"] = deviceName,
@@ -215,11 +221,16 @@ class Control:
 
             tn = Telnet(telnetHost, telnetPort, telnetUsername, telnetPassword)        
 
-
             data = self.getInfo(tn.executCommand("estado"))
+
             if mqttHost:
-                self.device = HomeAssistantDevice(data, mqttHost, mqttPort, mqttUser, mqttPass )
+                if debug:
+                    print("----- init homeassistant device -----")
+                self.device = HomeAssistantDevice(data, nhsHost, mqttHost, mqttPort, mqttUser, mqttPass )
         
+            if debug:
+                print("----- init main loop -----")
+
             while (True):
                 if debug:
                     print("----- begin of send -----")
@@ -234,10 +245,15 @@ class Control:
                     print("----- end of send -----")
                 time.sleep(10)
                 
-            tn.close() #close the connection
         except Exception as e:
             print(e)
+            traceback.print_exc()
             sys.exit()
+
+        finally:
+            if tn:
+                tn.close()
+                print("Conection Telnet closed")
 
     def getInfo(self, texto):
 
@@ -254,7 +270,7 @@ class Control:
                 key, value = linha.split(':', 1)
                 data[category][key.strip()] = value.strip()
 
-        # Convertendo para JSON
+        # Convert to JSON
         jsonResult = json.dumps(data, indent=4)
 
         # print the result

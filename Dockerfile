@@ -1,9 +1,12 @@
-FROM debian:bullseye
+FROM python:3.9.18-slim-bullseye
 
-RUN apt update && apt upgrade && apt install curl unzip -y
-RUN apt-get install -y python3 && apt-get install -y python3-pip
+RUN apt update && apt upgrade && apt install curl unzip -y && apt install -y procps
+# RUN apt-get install -y python3
+# RUN apt-get install -y python3-pip
 RUN python3 -m pip install paho-mqtt
-RUN apt-get remove -y python3-pip
+
+RUN apt-get install dos2unix
+RUN apt-get -y install netcat
 
 
 COPY nhsups_3.1.36_x86_64_eGLIBC_2.11.zip /tmp/nhscontrol.zip
@@ -19,14 +22,18 @@ WORKDIR /usr/local/nhs/
 COPY nhstelnet.py nhstelnet.py
 COPY start.sh start.sh
 
-#ENTRYPOINT ["./nhsupsserver"]
+RUN dos2unix start.sh
 
+# ENTRYPOINT ["./nhsupsserver"]
+# ENTRYPOINT ["python3", "nhstelnet.py"]
 # RUN echo 'iniciando nhscontrol'
-# CMD nhsupsserver.sh start
+# RUN ./nhsupsserver.sh start
 
 # RUN echo 'iniciando app'
 # CMD python3 nhstelnet.py
-#RUN /nhsupsserver.sh start
+#RUN ./nhsupsserver.sh start
 
 
 CMD bash start.sh
+
+# ENTRYPOINT ["./nhsupsserver"]
